@@ -4,6 +4,7 @@ authors = ["Nikolas Siccha <nikolassiccha@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+ElasticArrays = "fdbdab4c-e67f-52f5-8c3f-e7b388dad3d4"
 LambertW = "984bce1d-4616-540c-a9ee-88d1112d94c9"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"

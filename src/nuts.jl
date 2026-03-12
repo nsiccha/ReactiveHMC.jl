@@ -18,6 +18,21 @@ tree(d::Int) = (;
 )
 tree(phasepoint) = tree(length(phasepoint.pos))
 
+"""
+    nuts_state(init; rng, step_f, stats_f=nothing, max_depth=10, min_dham=-1000.)
+
+Create a NUTS sampler state.
+- `init` — a phasepoint (e.g. from `euclidean_phasepoint`)
+- `step_f` — integrator, e.g. `StepFn(leapfrog!, stepsize)`
+- `stats_f` — optional trajectory recorder (e.g. `trajectory_stats(dim)`)
+
+Before each step:
+1. `reset!(stats_f, state.init)`
+2. `@invalidatedependants! state.init.mom = ...`
+3. `ReactiveHMC.step!(state)`
+
+After the step, the accepted sample is in `state.init.pos`.
+"""
 @reactive nuts_state(
     init;
     rng,
@@ -25,7 +40,7 @@ tree(phasepoint) = tree(length(phasepoint.pos))
     min_dham=-1000.,
     step_f=nothing,
     stats_f=nothing
-) = begin 
+) = begin
     gofwd = true
     may_sample = true 
     may_continue = true

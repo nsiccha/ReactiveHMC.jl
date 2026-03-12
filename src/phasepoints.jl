@@ -1,6 +1,17 @@
 tr_prod(A::AbstractMatrix, B::AbstractMatrix) = sum(Base.broadcasted(*, A', B))
 
-@reactive euclidean_phasepoint(pot_f, grad_f, metric, pos, mom) = begin 
+"""
+    euclidean_phasepoint(pot_f, grad_f, metric, pos, mom)
+
+Create a reactive phasepoint with Euclidean (diagonal or dense) metric.
+- `pot_f(pos)` — potential energy (negated log density)
+- `grad_f(pos)` — returns `(pot, dpot_dpos)` (negated log density and gradient)
+- `metric` — mass matrix, typically `Diagonal(ones(dim))`
+
+Reactive fields: `pos`, `mom`, `metric` (mutable via `@invalidatedependants!`),
+`pot`, `dpot_dpos` (negated score), `ham`, `dham_dpos`, `dham_dmom`.
+"""
+@reactive euclidean_phasepoint(pot_f, grad_f, metric, pos, mom) = begin
     pot = pot_f(pos)
     pot, dpot_dpos = grad_f(pos)
 
