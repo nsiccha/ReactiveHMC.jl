@@ -1,0 +1,11 @@
+name = "ReactiveHMC"
+uuid = "60dab7c7-6c51-471c-be3b-16fd2bd4e027"
+authors = ["Nikolas Siccha <nikolassiccha@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+LambertW = "984bce1d-4616-540c-a9ee-88d1112d94c9"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ReactiveObjects = "47fa113f-da65-44bb-8fb0-07b53f5ab554"
