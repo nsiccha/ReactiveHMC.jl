@@ -6,6 +6,7 @@ makedocs(
     format   = DocumenterVitepress.MarkdownVitepress(
         repo = "github.com/nsiccha/ReactiveHMC.jl",
         devurl = "dev",
+        devbranch = "dev",
     ),
     pages = [
         "Home"      => "index.md",
