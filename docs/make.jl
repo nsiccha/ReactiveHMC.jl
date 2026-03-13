@@ -26,6 +26,6 @@ end
 
 DocumenterVitepress.deploydocs(
     repo = "github.com/nsiccha/ReactiveHMC.jl",
-    devbranch = "main",
+    devbranch = "dev",
     push_preview = true,
 )
