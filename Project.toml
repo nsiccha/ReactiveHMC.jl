@@ -11,6 +11,9 @@ LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 ReactiveObjects = "47fa113f-da65-44bb-8fb0-07b53f5ab554"
 
+[compat]
+julia = "1"
+
 [sources.ReactiveObjects]
 url = "https://github.com/nsiccha/ReactiveObjects.jl.git"
 
