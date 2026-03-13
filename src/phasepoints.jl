@@ -25,6 +25,16 @@ Reactive fields: `pos`, `mom`, `metric` (mutable via `@invalidatedependants!`),
     dham_dmom = dkin_dmom
 end
 
+"""
+    riemannian_phasepoint(pot_f, grad_f, metric_f, metric_grad_f, pos, mom)
+
+Create a reactive phasepoint with position-dependent Riemannian metric.
+- `metric_f(pos)` — returns `(pot, dpot_dpos, metric)`
+- `metric_grad_f(pos)` — returns `(pot, dpot_dpos, metric, metric_grad)` where
+  `metric_grad` is a 3D tensor (dim × dim × dim)
+
+Use with [`generalized_leapfrog!`](@ref) or [`implicit_midpoint!`](@ref).
+"""
 @reactive riemannian_phasepoint(pot_f, grad_f, metric_f, metric_grad_f, pos, mom) = begin
     pot = pot_f(pos)
     pot, dpot_dpos = grad_f(pos)
@@ -48,7 +58,18 @@ end
     dham_dmom = dkin_dmom
 end
 
-@reactive riemannian_softabs_phasepoint(pot_f, grad_f, premetric_f, premetric_grad_f, pos, mom; alpha=20.) = begin 
+"""
+    riemannian_softabs_phasepoint(pot_f, grad_f, premetric_f, premetric_grad_f, pos, mom; alpha=20.)
+
+Create a reactive phasepoint with SoftAbs-transformed Hessian metric.
+The metric is computed as `eigvals .* coth(alpha .* eigvals)` of the pre-metric
+(typically the negative Hessian), ensuring positive-definiteness.
+
+- `premetric_f(pos)` — returns `(pot, dpot_dpos, premetric)`
+- `premetric_grad_f(pos)` — returns `(pot, dpot_dpos, premetric, premetric_grad)`
+- `alpha` — softabs sharpness parameter (higher = closer to absolute value)
+"""
+@reactive riemannian_softabs_phasepoint(pot_f, grad_f, premetric_f, premetric_grad_f, pos, mom; alpha=20.) = begin
     pot = pot_f(pos)
     pot, dpot_dpos = grad_f(pos)
     pot, dpot_dpos, premetric = premetric_f(pos)
@@ -81,7 +102,14 @@ end
     dham_dmom = dkin_dmom
 end
 
-@reactive relativistic_euclidean_phasepoint(pot_f, grad_f, metric, pos, mom; c, m) = begin 
+"""
+    relativistic_euclidean_phasepoint(pot_f, grad_f, metric, pos, mom; c, m)
+
+Create a reactive phasepoint with relativistic kinetic energy and Euclidean metric.
+- `c` — speed of light parameter (bounds momentum contribution)
+- `m` — mass parameter
+"""
+@reactive relativistic_euclidean_phasepoint(pot_f, grad_f, metric, pos, mom; c, m) = begin
     pot = pot_f(pos)
     pot, dpot_dpos = grad_f(pos)
 
@@ -96,7 +124,14 @@ end
     dham_dmom = dkin_dmom
 end
 
-@reactive relativistic_riemannian_phasepoint(pot_f, grad_f, metric_f, metric_grad_f, pos, mom; c, m) = begin 
+"""
+    relativistic_riemannian_phasepoint(pot_f, grad_f, metric_f, metric_grad_f, pos, mom; c, m)
+
+Create a reactive phasepoint with relativistic kinetic energy and position-dependent
+Riemannian metric. Combines the metric callbacks of [`riemannian_phasepoint`](@ref)
+with the relativistic parameters of [`relativistic_euclidean_phasepoint`](@ref).
+"""
+@reactive relativistic_riemannian_phasepoint(pot_f, grad_f, metric_f, metric_grad_f, pos, mom; c, m) = begin
     pot = pot_f(pos)
     pot, dpot_dpos = grad_f(pos)
     pot, dpot_dpos, metric = metric_f(pos)
@@ -120,7 +155,14 @@ end
     dham_dmom = dkin_dmom
 end
 
-@reactive relativistic_riemannian_softabs_phasepoint(pot_f, grad_f, premetric_f, premetric_grad_f, pos, mom; alpha=20., c, m) = begin 
+"""
+    relativistic_riemannian_softabs_phasepoint(pot_f, grad_f, premetric_f, premetric_grad_f, pos, mom; alpha=20., c, m)
+
+Create a reactive phasepoint with relativistic kinetic energy and SoftAbs-transformed
+Hessian metric. Combines [`riemannian_softabs_phasepoint`](@ref) with relativistic
+parameters `c` (speed of light) and `m` (mass).
+"""
+@reactive relativistic_riemannian_softabs_phasepoint(pot_f, grad_f, premetric_f, premetric_grad_f, pos, mom; alpha=20., c, m) = begin
     pot = pot_f(pos)
     pot, dpot_dpos = grad_f(pos)
     pot, dpot_dpos, premetric = premetric_f(pos)

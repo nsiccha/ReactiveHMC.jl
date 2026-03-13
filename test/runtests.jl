@@ -274,4 +274,76 @@ end
         @test abs(pp.ham - ham_initial) < 0.1
     end
 
+    @testset "Generalized leapfrog with Euclidean metric" begin
+        pos = [1.0, 2.0]
+        mom = [0.5, -0.3]
+
+        pp_lf = make_phasepoint(copy(pos), copy(mom))
+        leapfrog!(pp_lf; stepsize=0.1)
+
+        pp_glf = make_phasepoint(copy(pos), copy(mom))
+        generalized_leapfrog!(pp_glf; stepsize=0.1, n_fi_steps=5)
+
+        @test pp_lf.pos ≈ pp_glf.pos atol=1e-8
+        @test pp_lf.mom ≈ pp_glf.mom atol=1e-8
+    end
+
+    @testset "Implicit midpoint with Euclidean metric" begin
+        pos = [1.0, 2.0]
+        mom = [0.5, -0.3]
+        pp = make_phasepoint(copy(pos), copy(mom))
+        ham_before = pp.ham
+
+        implicit_midpoint!(pp; stepsize=0.1, n_fi_steps=5)
+
+        @test abs(pp.ham - ham_before) < 0.01
+    end
+
+    @testset "Dual averaging custom target" begin
+        da = dual_averaging_state(1.0; target=0.65)
+        initial_step = da.current
+
+        for _ in 1:200
+            fit!(da, 0.9)
+        end
+
+        # Acceptance rate 0.9 is above target 0.65, so step size should increase
+        @test da.current > initial_step
+        @test isfinite(da.current)
+        @test da.current > 0
+    end
+
+    @testset "Welford variance reset via new instance" begin
+        wv1 = welford_var(DIM)
+        step!(wv1, [1.0, 2.0])
+        step!(wv1, [3.0, 4.0])
+        @test wv1.n ≈ 2.0
+
+        wv2 = welford_var(DIM)
+        @test wv2.n ≈ 0.0
+        @test all(wv2.mean .== 0.0)
+        @test all(wv2.var .== 0.0)
+    end
+
+    @testset "NUTS with non-identity metric" begin
+        rng = Xoshiro(999)
+        metric = Diagonal([0.5, 2.0])
+        pos0 = zeros(DIM)
+        mom0 = randn(rng, DIM)
+        pp = euclidean_phasepoint(pot_f, grad_f, metric, copy(pos0), copy(mom0))
+
+        state = nuts_state(pp;
+            rng=rng,
+            step_f=phasepoint -> leapfrog!(phasepoint; stepsize=0.5)
+        )
+
+        for _ in 1:10
+            @invalidatedependants! state.init.mom = randn(rng, DIM)
+            step!(state)
+        end
+
+        @test all(isfinite, state.init.pos)
+        @test norm(state.init.pos) < 30.0
+    end
+
 end
