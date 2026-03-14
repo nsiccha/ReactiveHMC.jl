@@ -17,7 +17,7 @@
         for _ in 1:n_steps
             step_f(fwd)
             dham = finiteorneginf(init.ham - fwd.ham)
-            stats_f(__self__)
+            isnothing(stats_f) || stats_f(__self__)
             diverged && return
         end
         randbernoullilog(rng, dham) && rcopy!(init, fwd)

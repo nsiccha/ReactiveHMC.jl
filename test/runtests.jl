@@ -346,4 +346,58 @@ end
         @test norm(state.init.pos) < 30.0
     end
 
+    @testset "partial function" begin
+        # Basic usage: partial application with positional args
+        add(a, b; c=0) = a + b + c
+        p = partial(add, 10; c=5)
+        @test p(3) == 18  # 10 + 3 + 5
+
+        # Kwargs accessible as properties
+        step_f = partial(leapfrog!; stepsize=0.5)
+        @test step_f.stepsize == 0.5
+
+        # Calling the partial with a phasepoint
+        pp = make_phasepoint([1.0, 2.0], [0.5, -0.3])
+        ham_before = pp.ham
+        step_f(pp)
+        @test all(isfinite, pp.pos)
+        @test all(isfinite, pp.mom)
+
+        # Colon syntax: partial(f, :, rargs...) puts args on the right
+        subtract(a, b) = a - b
+        sub5 = partial(subtract, :, 5)
+        @test sub5(10) == 5  # 10 - 5
+
+        # Colon syntax with left arg: partial(f, l1, :, rargs...)
+        div3arg(a, b, c) = (a + b) / c
+        p2 = partial(div3arg, 1, :, 2)
+        @test p2(3) == 2.0  # (1 + 3) / 2
+
+        # Multiple kwargs accessible as properties
+        p3 = partial(identity; alpha=0.1, beta=0.2)
+        @test p3.alpha == 0.1
+        @test p3.beta == 0.2
+    end
+
+    @testset "hmc_state with stats_f=nothing" begin
+        rng = Xoshiro(123)
+        pp = make_phasepoint(zeros(DIM), randn(rng, DIM))
+
+        state = hmc_state(pp;
+            rng=rng,
+            n_steps=3,
+            step_f=partial(leapfrog!; stepsize=0.3),
+            stats_f=nothing
+        )
+
+        # Should not error when stats_f is nothing
+        for _ in 1:5
+            @invalidatedependants! state.init.mom = randn(rng, DIM)
+            step!(state)
+        end
+
+        @test all(isfinite, state.init.pos)
+        @test norm(state.init.pos) < 20.0
+    end
+
 end
