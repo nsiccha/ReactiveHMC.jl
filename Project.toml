@@ -15,9 +15,9 @@ ReactiveObjects = "47fa113f-da65-44bb-8fb0-07b53f5ab554"
 julia = "1"
 
 [extras]
-ElasticArrays = "fdbdab4c-e67f-52f5-8c3f-e7b388dad3d4"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestModules = "63c02187-99fd-4e5c-aaf0-4d6bfebc181c"
 
 [targets]
-test = ["Test", "Statistics", "ElasticArrays"]
+test = ["Statistics", "Test", "TestModules"]
