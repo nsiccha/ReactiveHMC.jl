@@ -12,6 +12,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 ReactiveObjects = "47fa113f-da65-44bb-8fb0-07b53f5ab554"
 
 [sources]
+ReactiveObjects = {url = "https://github.com/nsiccha/ReactiveObjects.jl", rev = "dev"}
 TestModules = {url = "https://github.com/nsiccha/TestModules.jl"}
 
 [compat]
