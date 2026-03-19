@@ -1,3 +1,14 @@
+"""
+    hmc_state(init; rng, n_steps=1, step_f, stats_f=nothing, min_dham=-1000.)
+
+Create an HMC sampler state with fixed trajectory length.
+- `init` — a phasepoint (e.g. from `euclidean_phasepoint`)
+- `n_steps` — number of leapfrog steps per iteration
+- `step_f` — integrator, e.g. `partial(leapfrog!; stepsize=0.5)`
+- `stats_f` — optional trajectory recorder (e.g. `trajectory_stats(dim)`)
+
+After `ReactiveHMC.step!(state)`, the accepted sample is in `state.init.pos`.
+"""
 @reactive hmc_state(
     init;
     rng,

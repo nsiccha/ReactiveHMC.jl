@@ -39,7 +39,7 @@ end
 Accumulate per-iteration statistics across a full NUTS sampling run.
 Wraps a `trajectory_stats` instance.
 
-Call `dstats(state, da_state)` after each NUTS step to record:
+Call the resulting object as `sstats(state, da_state)` after each step to record:
 - `draws` — accepted positions (dim × n_draws)
 - `n_steps` — leapfrog steps per iteration
 - `stepsizes` — step size used per iteration
