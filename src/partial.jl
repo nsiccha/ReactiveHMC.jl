@@ -29,10 +29,13 @@ _kwargs(f::PartialFunction) = getfield(f, :kwargs)
 
 Base.getproperty(f::PartialFunction, x::Symbol) = getfield(_kwargs(f), x)
 
+_is_displayable(::Union{Number,Symbol,AbstractString}) = true
+_is_displayable(_) = false
+
 function Base.show(io::IO, f::PartialFunction)
     print(io, _func(f), "(")
-    join(io, filter(x -> isa(x, Union{Number,Symbol,AbstractString}), _largs(f)), ", ")
-    kws = ["$k=$v" for (k, v) in pairs(filter(x -> isa(x, Union{Number,Symbol,AbstractString}), _kwargs(f)))]
+    join(io, filter(_is_displayable, _largs(f)), ", ")
+    kws = ["$k=$v" for (k, v) in pairs(filter(_is_displayable, _kwargs(f)))]
     if !isempty(kws)
         print(io, "; ")
         join(io, kws, ", ")
