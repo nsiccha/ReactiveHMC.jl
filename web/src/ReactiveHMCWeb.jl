@@ -481,7 +481,7 @@ CSS = """
         )]
     end
 
-    @get clear_cache = begin
+    @get clear_cache() = begin
         rm(cache_path; recursive=true, force=true)
         page[h.div(
             h.h1("Cache cleared"),
