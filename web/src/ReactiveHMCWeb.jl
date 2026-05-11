@@ -1,6 +1,13 @@
 module ReactiveHMCWeb
 
 using HTMXObjects
+# Load Treebars before importing `RecordingRoutes` — Treebars activates
+# HTMXObjects's `HTMXObjectsTreebarsExt`, which is what gives
+# `RecordingRoutes` its live progress UI (polling_fetchindex). Without
+# this the mount still works but the user stares at a frozen request
+# until recording finishes.
+using Treebars
+using HTMXObjects: RecordingRoutes
 using ReactiveHMC
 using ReactiveObjects
 using LinearAlgebra
@@ -505,6 +512,25 @@ CSS = """
 
     @include tests = TestRoutes(; __req__, test_module=@__MODULE__)
     @include structure = StructureRoutes(; root=AppContext)
+
+    # GET `/record_gallery` — drives `RecordingRoutes` to dump the
+    # benchmark dashboard surfaces (`/` explorer + `/table` single-config
+    # view) into `docs/src/public/live-reactivehmc/` as static HTML
+    # (full + HX shapes). The docs build picks them up from there and
+    # the `docs/src/gallery.md` page embeds them via `htmxo-embed`.
+    # Override `record_base` via the `RECORD_BASE_PREFIX` env var.
+    #
+    # ReactiveHMC's "demo surface" is one comparative benchmark, not a
+    # multi-item gallery — there's nothing genuinely per-item to expose
+    # as `web/gallery/<item>.jl`. The two recorded routes give the
+    # dashboard + a worked-example table.
+    @include record_gallery = RecordingRoutes(;
+        app_type    = AppContext,
+        paths       = ["/", "/table"],
+        record_dir  = joinpath(dirname(dirname(@__DIR__)), "docs", "src", "public", "live-reactivehmc"),
+        record_base = get(ENV, "RECORD_BASE_PREFIX", "/ReactiveHMC.jl/dev/live-reactivehmc"),
+        label       = "Recording ReactiveHMC benchmark dashboard",
+    )
 end
 
 function __init__()
