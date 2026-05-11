@@ -429,8 +429,8 @@ CSS = """
         ]
     end
 
-    page(content) = htmx(
-        h.body(h.main(class="container")(content));
+    __page__(content) = htmx(
+        h.main(class="container")(content);
         pico_version="2",
         extra_head=(
             vega_head()...,
@@ -458,7 +458,7 @@ CSS = """
 
     @get index(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
         tbl = @memo sweep(; stepsize, n_steps, seed).df
-        page[h.div(
+        h.div(
             h.h1("ReactiveHMC — Benchmark Explorer"),
             explorer_widget(Dict("benchmark" => tbl);
                 default_ds="benchmark",
@@ -470,37 +470,37 @@ CSS = """
             ),
             h.hr(),
             h.p(h.a(href="/table?dim=10")("Single-config table view")),
-        )]
+        )
     end
 
     @get clear_cache() = begin
         rm(cache_path; recursive=true, force=true)
-        page[h.div(
+        h.div(
             h.h1("Cache cleared"),
             h.p(h.a(href="/")("Back to explorer")),
-        )]
+        )
     end
 
     @get table(; dim::Int=10, kappa::Float64=100.0, stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
         results = @memo bench_result(; n_dim=dim, condition_number=kappa, stepsize, n_steps, seed).rows
-        page[h.div(
+        h.div(
             h.h1("ReactiveHMC.jl — Benchmark Comparison"),
             h.p("Diagonal MVN: $(dim)D, κ=$(kappa), stepsize=$(stepsize)"),
             render_comparison_table(results),
             h.p(h.a(href="/")("Back to explorer")),
-        )]
+        )
     end
 
     @get table_sweep(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
         s = @memo sweep(; stepsize, n_steps, seed)
-        page[h.div(
+        h.div(
             h.h1("Sweep Data — $(nrow(s.df)) rows"),
             h.p("$(length(s.rows)) benchmark configs × samples each"),
             h.details(h.summary("First 50 rows"))(
                 h.pre(string(first(s.df, 50))),
             ),
             h.p(h.a(href="/")("Back to explorer")),
-        )]
+        )
     end
 
     @include tests = TestRoutes(; __req__, test_module=@__MODULE__)
