@@ -8,4 +8,7 @@ docs/node_modules/
 docs/package-lock.json
 docs/site/
 
+# Auto-generated HTMXObjects recording outputs — not committed to main
+docs/src/public/live-*/
+
 CLAUDE.md
