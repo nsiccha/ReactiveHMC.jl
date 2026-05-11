@@ -175,9 +175,9 @@ CSS = """
     cache_path = joinpath(dirname(dirname(@__DIR__)), "web", "cache")
 
     # One configuration → eight benchmark variants. Named siblings own the
-    # per-method computation; the `bench(method)` dispatcher does the
-    # canonical `getproperty(__parent__, method)` lookup (mirrors WHMC's
-    # `result(method)` shape — see the `do` skill §4).
+    # per-method computation; `rows` reads them directly. (Earlier shape
+    # had a `bench(method::Symbol)` dispatcher; dropped per do-use §3 —
+    # single-callsite passthrough adds nothing.)
     @struct bench_result(; n_dim, condition_number, stepsize, n_steps, seed) = begin
 
         @struct rhmc_nuts_no_stats = begin
@@ -427,21 +427,15 @@ CSS = """
             end
         end
 
-        # Dispatcher — bare `getproperty(__parent__, method)` lookup, no
-        # branching, no name munging. (`do` skill §4.)
-        @struct bench(method::Symbol) = begin
-            row = getproperty(__parent__, method).row
-        end
-
         rows = [
-            bench(:rhmc_nuts_no_stats).row,
-            bench(:rhmc_nuts_full).row,
-            bench(:rhmc_hmc_no_stats).row,
-            bench(:rhmc_hmc_full).row,
-            bench(:plain_hmc).row,
-            bench(:nutsjl).row,
-            bench(:advancedhmc).row,
-            bench(:dynamichmc).row,
+            rhmc_nuts_no_stats.row,
+            rhmc_nuts_full.row,
+            rhmc_hmc_no_stats.row,
+            rhmc_hmc_full.row,
+            plain_hmc.row,
+            nutsjl.row,
+            advancedhmc.row,
+            dynamichmc.row,
         ]
     end
 
