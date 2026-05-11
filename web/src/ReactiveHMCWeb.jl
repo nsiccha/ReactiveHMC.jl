@@ -82,17 +82,7 @@ function count_grads(count_step!, grads_for; n_count=50)
     total_grads / n_count
 end
 
-# ── Aggregation + rendering helpers ──────────────────────────────────────────
-
-function collect_sweep(app; dims=[2, 4, 8, 16, 32, 64, 128], kappas=[1.0, 100.0], stepsize=0.5, n_steps=10, seed=42)
-    rows = NamedTuple[]
-    for n_dim in dims, kappa in kappas
-        for r in @memo app.bench_result(; n_dim, condition_number=kappa, stepsize, n_steps, seed).rows
-            push!(rows, r)
-        end
-    end
-    rows
-end
+# ── DataFrame builder ────────────────────────────────────────────────────────
 
 function results_to_dataframe(rows)
     df = DataFrame(
@@ -449,9 +439,25 @@ CSS = """
         ),
     )
 
+    # The full benchmark sweep keyed by run params. Owns both the raw rows
+    # and the derived DataFrame so every route consumes a single identity.
+    # (Was a top-level `collect_sweep(app; …)` helper — Case-B antipattern
+    # per do-use §3 since `app` was always `__self__`.)
+    @struct sweep(; dims=[2, 4, 8, 16, 32, 64, 128], kappas=[1.0, 100.0],
+                    stepsize=0.5, n_steps=10, seed=42) = begin
+        rows = let acc = NamedTuple[]
+            for n_dim in dims, kappa in kappas
+                for r in @memo __parent__.bench_result(; n_dim, condition_number=kappa, stepsize, n_steps, seed).rows
+                    push!(acc, r)
+                end
+            end
+            acc
+        end
+        df = results_to_dataframe(rows)
+    end
+
     @get index(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
-        rows = collect_sweep(__self__; stepsize, n_steps, seed)
-        tbl = results_to_dataframe(rows)
+        tbl = @memo sweep(; stepsize, n_steps, seed).df
         page[h.div(
             h.h1("ReactiveHMC — Benchmark Explorer"),
             explorer_widget(Dict("benchmark" => tbl);
@@ -475,30 +481,6 @@ CSS = """
         )]
     end
 
-    @get debug(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
-        rows = collect_sweep(__self__; stepsize, n_steps, seed)
-        r1 = rows[1]
-        s1 = r1.trial.samples[1]
-        lines = [
-            "rows: $(length(rows))",
-            "r1.name: $(r1.name)",
-            "r1.trial samples: $(length(r1.trial.samples))",
-            "s1: $(s1)",
-            "s1.warmup: $(s1.warmup) ($(typeof(s1.warmup)))",
-            "s1.time: $(s1.time)",
-            "s1.allocs: $(s1.allocs)",
-            "",
-            "DataFrame test:",
-        ]
-        tbl = results_to_dataframe(rows)
-        push!(lines, "nrow: $(nrow(tbl))")
-        push!(lines, "ncol: $(ncol(tbl))")
-        if nrow(tbl) > 0
-            push!(lines, string(first(tbl, 5)))
-        end
-        join(lines, "\n")
-    end
-
     @get table(; dim::Int=10, kappa::Float64=100.0, stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
         results = @memo bench_result(; n_dim=dim, condition_number=kappa, stepsize, n_steps, seed).rows
         page[h.div(
@@ -510,13 +492,12 @@ CSS = """
     end
 
     @get table_sweep(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
-        rows = collect_sweep(__self__; stepsize, n_steps, seed)
-        tbl = results_to_dataframe(rows)
+        s = @memo sweep(; stepsize, n_steps, seed)
         page[h.div(
-            h.h1("Sweep Data — $(nrow(tbl)) rows"),
-            h.p("$(length(rows)) benchmark configs × samples each"),
+            h.h1("Sweep Data — $(nrow(s.df)) rows"),
+            h.p("$(length(s.rows)) benchmark configs × samples each"),
             h.details(h.summary("First 50 rows"))(
-                h.pre(string(first(tbl, 50))),
+                h.pre(string(first(s.df, 50))),
             ),
             h.p(h.a(href="/")("Back to explorer")),
         )]
