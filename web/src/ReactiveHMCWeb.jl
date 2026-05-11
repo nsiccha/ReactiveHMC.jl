@@ -57,6 +57,31 @@ function make_result(; name, trial, n_grads, n_dim, condition_number, stepsize)
     (; name, trial, n_grads, n_dim, condition_number, stepsize)
 end
 
+# Shared setup for the 4 ReactiveHMC benchmark variants — target/RNG/metric/
+# phasepoint/step_f all derive from the same (n_dim, condition_number, seed,
+# stepsize) tuple. Per dev §4 (extract shared core from parallel near-copies).
+function rhmc_setup(; n_dim, condition_number, seed, stepsize)
+    target = make_diagonal_mvn(; n_dim, condition_number)
+    rng = Random.Xoshiro(seed)
+    metric = Diagonal(ones(n_dim))
+    pp = euclidean_phasepoint(target.pot_f, target.grad_f, metric, zeros(n_dim), randn(rng, n_dim))
+    step_f = partial(leapfrog!; stepsize)
+    (; target, rng, metric, pp, step_f)
+end
+
+# Average gradient evaluations per call, derived by running `count_step!` 50
+# times and summing `grads_for(...)` after each. Used by every NUTS-style
+# benchmark (rhmc_nuts_full, advancedhmc, dynamichmc, nutsjl) to derive
+# `mean_grads`.
+function count_grads(count_step!, grads_for; n_count=50)
+    total_grads = 0
+    for _ in 1:n_count
+        ctx = count_step!()
+        total_grads += grads_for(ctx)
+    end
+    total_grads / n_count
+end
+
 # ── Aggregation + rendering helpers ──────────────────────────────────────────
 
 function collect_sweep(app; dims=[2, 4, 8, 16, 32, 64, 128], kappas=[1.0, 100.0], stepsize=0.5, n_steps=10, seed=42)
@@ -157,11 +182,7 @@ CSS = """
 
         @struct rhmc_nuts_no_stats = begin
             @cached row = let
-                target = make_diagonal_mvn(; n_dim, condition_number)
-                rng = Random.Xoshiro(seed)
-                metric = Diagonal(ones(n_dim))
-                pp = euclidean_phasepoint(target.pot_f, target.grad_f, metric, zeros(n_dim), randn(rng, n_dim))
-                step_f = partial(leapfrog!; stepsize)
+                (; target, rng, metric, pp, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 state = nuts_state(pp; rng, step_f, stats_f=nothing)
 
                 do_step! = () -> begin
@@ -177,20 +198,15 @@ CSS = """
                 pp2 = euclidean_phasepoint(target.pot_f, target.grad_f, metric, zeros(n_dim), randn(rng2, n_dim))
                 ts = trajectory_stats(n_dim)
                 state2 = nuts_state(pp2; rng=rng2, step_f, stats_f=ts)
-                n_count = 50
-                total_grads = 0
-                for _ in 1:n_count
-                    reset!(ts, state2.init)
-                    @invalidatedependants! state2.init.mom = randn(rng2, n_dim)
-                    step!(state2)
-                    total_grads += length(ts.dhams) - 1
-                end
-                # Run the timed steps without stats so the trial reflects the
-                # no-stats configuration.
-                for _ in 1:n_count
-                    do_step!()
-                end
-                mean_grads = total_grads / n_count
+                mean_grads = count_grads(
+                    () -> begin
+                        reset!(ts, state2.init)
+                        @invalidatedependants! state2.init.mom = randn(rng2, n_dim)
+                        step!(state2)
+                        ts
+                    end,
+                    ctx -> length(ctx.dhams) - 1,
+                )
 
                 trial = @be do_step!()
                 make_result(; name="ReactiveHMC NUTS (no stats)", trial,
@@ -200,11 +216,7 @@ CSS = """
 
         @struct rhmc_nuts_full = begin
             @cached row = let
-                target = make_diagonal_mvn(; n_dim, condition_number)
-                rng = Random.Xoshiro(seed)
-                metric = Diagonal(ones(n_dim))
-                pp = euclidean_phasepoint(target.pot_f, target.grad_f, metric, zeros(n_dim), randn(rng, n_dim))
-                step_f = partial(leapfrog!; stepsize)
+                (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 stats_f = trajectory_stats(n_dim)
                 state = nuts_state(pp; rng, step_f, stats_f)
 
@@ -217,13 +229,7 @@ CSS = """
                 # Warmup
                 do_step!()
 
-                n_count = 50
-                total_grads = 0
-                for _ in 1:n_count
-                    do_step!()
-                    total_grads += length(stats_f.dhams) - 1
-                end
-                mean_grads = total_grads / n_count
+                mean_grads = count_grads(do_step!, _ -> length(stats_f.dhams) - 1)
 
                 trial = @be do_step!()
                 make_result(; name="ReactiveHMC NUTS (stats)", trial,
@@ -233,11 +239,7 @@ CSS = """
 
         @struct rhmc_hmc_no_stats = begin
             @cached row = let
-                target = make_diagonal_mvn(; n_dim, condition_number)
-                rng = Random.Xoshiro(seed)
-                metric = Diagonal(ones(n_dim))
-                pp = euclidean_phasepoint(target.pot_f, target.grad_f, metric, zeros(n_dim), randn(rng, n_dim))
-                step_f = partial(leapfrog!; stepsize)
+                (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 state = hmc_state(pp; rng, step_f, stats_f=nothing, n_steps)
 
                 do_step! = () -> ReactiveHMC.step!(state)
@@ -253,11 +255,7 @@ CSS = """
 
         @struct rhmc_hmc_full = begin
             @cached row = let
-                target = make_diagonal_mvn(; n_dim, condition_number)
-                rng = Random.Xoshiro(seed)
-                metric = Diagonal(ones(n_dim))
-                pp = euclidean_phasepoint(target.pot_f, target.grad_f, metric, zeros(n_dim), randn(rng, n_dim))
-                step_f = partial(leapfrog!; stepsize)
+                (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 stats_f = trajectory_stats(n_dim)
                 state = hmc_state(pp; rng, step_f, stats_f, n_steps)
 
@@ -356,16 +354,15 @@ CSS = """
                 # Warmup
                 do_step!()
 
-                # Count average gradient evals
-                n_count = 50
-                total_grads = 0
-                for _ in 1:n_count
-                    z = AdvancedHMC.phasepoint(rng, z.θ, hamiltonian)
-                    trans = AdvancedHMC.transition(rng, hamiltonian, trajectory, z)
-                    z = trans.z
-                    total_grads += trans.stat.n_steps
-                end
-                mean_grads = total_grads / n_count
+                mean_grads = count_grads(
+                    () -> begin
+                        z = AdvancedHMC.phasepoint(rng, z.θ, hamiltonian)
+                        trans = AdvancedHMC.transition(rng, hamiltonian, trajectory, z)
+                        z = trans.z
+                        trans
+                    end,
+                    trans -> trans.stat.n_steps,
+                )
 
                 trial = @be do_step!()
                 make_result(; name="AdvancedHMC NUTS", trial,
@@ -390,14 +387,13 @@ CSS = """
                 # Warmup
                 do_step!()
 
-                # Count average gradient evals
-                n_count = 50
-                total_grads = 0
-                for _ in 1:n_count
-                    Q, stats = DynamicHMC.sample_tree(rng, algorithm, H, Q, stepsize)
-                    total_grads += stats.steps
-                end
-                mean_grads = total_grads / n_count
+                mean_grads = count_grads(
+                    () -> begin
+                        Q, stats = DynamicHMC.sample_tree(rng, algorithm, H, Q, stepsize)
+                        stats
+                    end,
+                    stats -> stats.steps,
+                )
 
                 trial = @be do_step!()
                 make_result(; name="DynamicHMC NUTS", trial,
@@ -416,14 +412,10 @@ CSS = """
                 # Warmup
                 state = NUTSjl.nuts!!(state)
 
-                # Count average gradient evals
-                n_count = 50
-                total_grads = 0
-                for _ in 1:n_count
-                    state = NUTSjl.nuts!!(state)
-                    total_grads += state.n_leapfrog
-                end
-                mean_grads = total_grads / n_count
+                mean_grads = count_grads(
+                    () -> (state = NUTSjl.nuts!!(state); state),
+                    s -> s.n_leapfrog,
+                )
 
                 do_step! = () -> begin
                     state = NUTSjl.nuts!!(state)
