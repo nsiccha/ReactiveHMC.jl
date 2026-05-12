@@ -178,7 +178,7 @@ CSS = """
     @struct bench_result(; n_dim, condition_number, stepsize, n_steps, seed) = begin
 
         @struct rhmc_nuts_no_stats = begin
-            @cached row = let
+            @diskcached row = let
                 (; target, rng, metric, pp, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 state = nuts_state(pp; rng, step_f, stats_f=nothing)
 
@@ -212,7 +212,7 @@ CSS = """
         end
 
         @struct rhmc_nuts_full = begin
-            @cached row = let
+            @diskcached row = let
                 (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 stats_f = trajectory_stats(n_dim)
                 state = nuts_state(pp; rng, step_f, stats_f)
@@ -235,7 +235,7 @@ CSS = """
         end
 
         @struct rhmc_hmc_no_stats = begin
-            @cached row = let
+            @diskcached row = let
                 (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 state = hmc_state(pp; rng, step_f, stats_f=nothing, n_steps)
 
@@ -251,7 +251,7 @@ CSS = """
         end
 
         @struct rhmc_hmc_full = begin
-            @cached row = let
+            @diskcached row = let
                 (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 stats_f = trajectory_stats(n_dim)
                 state = hmc_state(pp; rng, step_f, stats_f, n_steps)
@@ -268,7 +268,7 @@ CSS = """
         end
 
         @struct plain_hmc = begin
-            @cached row = let
+            @diskcached row = let
                 target = make_diagonal_mvn(; n_dim, condition_number)
                 rng = Random.Xoshiro(seed)
                 metric = ones(n_dim)  # diagonal metric as vector
@@ -329,7 +329,7 @@ CSS = """
         end
 
         @struct advancedhmc = begin
-            @cached row = let
+            @diskcached row = let
                 target = make_diagonal_mvn(; n_dim, condition_number)
                 rng = Random.Xoshiro(seed)
                 metric = AdvancedHMC.DiagEuclideanMetric(n_dim)
@@ -368,7 +368,7 @@ CSS = """
         end
 
         @struct dynamichmc = begin
-            @cached row = let
+            @diskcached row = let
                 target = DiagonalMVNTarget(n_dim, make_diagonal_mvn(; n_dim, condition_number).inv_vars)
                 rng = Random.Xoshiro(seed)
                 κ = DynamicHMC.GaussianKineticEnergy(n_dim)
@@ -399,7 +399,7 @@ CSS = """
         end
 
         @struct nutsjl = begin
-            @cached row = let
+            @diskcached row = let
                 target = make_diagonal_mvn(; n_dim, condition_number)
                 rng = Random.Xoshiro(seed)
                 posterior = NUTSjlTarget(target.inv_vars)
@@ -454,7 +454,7 @@ CSS = """
                     stepsize=0.5, n_steps=10, seed=42) = begin
         rows = let acc = NamedTuple[]
             for n_dim in dims, kappa in kappas
-                for r in @memo __parent__.bench_result(; n_dim, condition_number=kappa, stepsize, n_steps, seed).rows
+                for r in @memo! __parent__.bench_result(; n_dim, condition_number=kappa, stepsize, n_steps, seed).rows
                     push!(acc, r)
                 end
             end
@@ -464,7 +464,7 @@ CSS = """
     end
 
     @get index(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
-        tbl = @memo sweep(; stepsize, n_steps, seed).df
+        tbl = @memo! sweep(; stepsize, n_steps, seed).df
         h.div(
             h.h1("ReactiveHMC — Benchmark Explorer"),
             explorer_widget(Dict("benchmark" => tbl);
@@ -489,7 +489,7 @@ CSS = """
     end
 
     @get table(; dim::Int=10, kappa::Float64=100.0, stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
-        results = @memo bench_result(; n_dim=dim, condition_number=kappa, stepsize, n_steps, seed).rows
+        results = @memo! bench_result(; n_dim=dim, condition_number=kappa, stepsize, n_steps, seed).rows
         h.div(
             h.h1("ReactiveHMC.jl — Benchmark Comparison"),
             h.p("Diagonal MVN: $(dim)D, κ=$(kappa), stepsize=$(stepsize)"),
@@ -499,7 +499,7 @@ CSS = """
     end
 
     @get table_sweep(; stepsize::Float64=0.5, n_steps::Int=10, seed::Int=42) = begin
-        s = @memo sweep(; stepsize, n_steps, seed)
+        s = @memo! sweep(; stepsize, n_steps, seed)
         h.div(
             h.h1("Sweep Data — $(nrow(s.df)) rows"),
             h.p("$(length(s.rows)) benchmark configs × samples each"),
