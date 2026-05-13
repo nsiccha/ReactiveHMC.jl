@@ -175,9 +175,9 @@ CSS = """
     # per-method computation; `rows` reads them directly. (Earlier shape
     # had a `bench(method::Symbol)` dispatcher; dropped per do-use §3 —
     # single-callsite passthrough adds nothing.)
-    @struct bench_result(; n_dim, condition_number, stepsize, n_steps, seed) = begin
+    @include bench_result(; n_dim, condition_number, stepsize, n_steps, seed) = begin
 
-        @struct rhmc_nuts_no_stats = begin
+        @include rhmc_nuts_no_stats = begin
             @diskcached row = let
                 (; target, rng, metric, pp, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 state = nuts_state(pp; rng, step_f, stats_f=nothing)
@@ -211,7 +211,7 @@ CSS = """
             end
         end
 
-        @struct rhmc_nuts_full = begin
+        @include rhmc_nuts_full = begin
             @diskcached row = let
                 (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 stats_f = trajectory_stats(n_dim)
@@ -234,7 +234,7 @@ CSS = """
             end
         end
 
-        @struct rhmc_hmc_no_stats = begin
+        @include rhmc_hmc_no_stats = begin
             @diskcached row = let
                 (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 state = hmc_state(pp; rng, step_f, stats_f=nothing, n_steps)
@@ -250,7 +250,7 @@ CSS = """
             end
         end
 
-        @struct rhmc_hmc_full = begin
+        @include rhmc_hmc_full = begin
             @diskcached row = let
                 (; pp, rng, step_f) = rhmc_setup(; n_dim, condition_number, seed, stepsize)
                 stats_f = trajectory_stats(n_dim)
@@ -267,7 +267,7 @@ CSS = """
             end
         end
 
-        @struct plain_hmc = begin
+        @include plain_hmc = begin
             @diskcached row = let
                 target = make_diagonal_mvn(; n_dim, condition_number)
                 rng = Random.Xoshiro(seed)
@@ -328,7 +328,7 @@ CSS = """
             end
         end
 
-        @struct advancedhmc = begin
+        @include advancedhmc = begin
             @diskcached row = let
                 target = make_diagonal_mvn(; n_dim, condition_number)
                 rng = Random.Xoshiro(seed)
@@ -367,7 +367,7 @@ CSS = """
             end
         end
 
-        @struct dynamichmc = begin
+        @include dynamichmc = begin
             @diskcached row = let
                 target = DiagonalMVNTarget(n_dim, make_diagonal_mvn(; n_dim, condition_number).inv_vars)
                 rng = Random.Xoshiro(seed)
@@ -398,7 +398,7 @@ CSS = """
             end
         end
 
-        @struct nutsjl = begin
+        @include nutsjl = begin
             @diskcached row = let
                 target = make_diagonal_mvn(; n_dim, condition_number)
                 rng = Random.Xoshiro(seed)
@@ -450,7 +450,7 @@ CSS = """
     # and the derived DataFrame so every route consumes a single identity.
     # (Was a top-level `collect_sweep(app; …)` helper — Case-B antipattern
     # per do-use §3 since `app` was always `__self__`.)
-    @struct sweep(; dims=[2, 4, 8, 16, 32, 64, 128], kappas=[1.0, 100.0],
+    @include sweep(; dims=[2, 4, 8, 16, 32, 64, 128], kappas=[1.0, 100.0],
                     stepsize=0.5, n_steps=10, seed=42) = begin
         rows = let acc = NamedTuple[]
             for n_dim in dims, kappa in kappas
